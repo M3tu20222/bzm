@@ -22,11 +22,20 @@ import { useState } from "react";
 const navItems = [
   { name: "Ana Sayfa", href: "/", icon: HomeIcon },
   { name: "Kullanıcı Yönetimi", href: "/users", icon: UserGroupIcon },
-  { name: "Tarla Yönetimi", href: "/fields", icon: Square2StackIcon },
+  {
+    name: "Tarla Yönetimi",
+    href: "/farmland-management",
+    icon: Square2StackIcon,
+  }, // Updated this line
   { name: "Ürün Yönetimi", href: "/products", icon: BeakerIcon },
   { name: "Gübre Yönetimi", href: "/fertilizers", icon: CloudIcon },
   { name: "Sulama Yönetimi", href: "/irrigation", icon: CloudIcon },
   { name: "Finansal Yönetim", href: "/finance", icon: CurrencyDollarIcon },
+  {
+    name: "Tarla Masrafları",
+    href: "/farmland/expenses",
+    icon: CurrencyDollarIcon,
+  },
   { name: "Raporlama", href: "/reports", icon: ChartBarIcon },
   {
     name: "Envanter Yönetimi",

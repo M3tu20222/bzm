@@ -3,8 +3,24 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { PencilSquareIcon, UserMinusIcon } from "@heroicons/react/24/outline";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { toast } from "sonner";
 
 interface User {
   _id: string;
@@ -15,6 +31,8 @@ interface User {
 
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
   const { data: session, status } = useSession();
   const router = useRouter();
 
@@ -38,6 +56,56 @@ export default function UsersPage() {
       setUsers(data);
     } catch (error) {
       console.error("Kullanıcılar yüklenirken hata oluştu:", error);
+      toast.error("Kullanıcılar yüklenirken bir hata oluştu");
+    }
+  };
+
+  const handleEdit = (user: User) => {
+    setEditingUser(user);
+    setIsEditModalOpen(true);
+  };
+
+  const handleDelete = async (userId: string) => {
+    if (window.confirm("Bu kullanıcıyı silmek istediğinizden emin misiniz?")) {
+      try {
+        const response = await fetch(`/api/users/${userId}`, {
+          method: "DELETE",
+        });
+        if (!response.ok) {
+          throw new Error("Kullanıcı silinemedi");
+        }
+        setUsers(users.filter((user) => user._id !== userId));
+        toast.success("Kullanıcı başarıyla silindi");
+      } catch (error) {
+        console.error("Kullanıcı silinirken hata oluştu:", error);
+        toast.error("Kullanıcı silinirken bir hata oluştu");
+      }
+    }
+  };
+
+  const handleUpdate = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!editingUser) return;
+
+    try {
+      const response = await fetch(`/api/users/${editingUser._id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(editingUser),
+      });
+      if (!response.ok) {
+        throw new Error("Kullanıcı güncellenemedi");
+      }
+      setUsers(
+        users.map((user) => (user._id === editingUser._id ? editingUser : user))
+      );
+      setIsEditModalOpen(false);
+      toast.success("Kullanıcı başarıyla güncellendi");
+    } catch (error) {
+      console.error("Kullanıcı güncellenirken hata oluştu:", error);
+      toast.error("Kullanıcı güncellenirken bir hata oluştu");
     }
   };
 
@@ -73,13 +141,16 @@ export default function UsersPage() {
               </div>
               <p className="text-sm text-gray-400 mb-4">{user.email}</p>
               <div className="flex justify-end space-x-2">
-                <Link
-                  href={`/users/edit/${user._id}`}
+                <button
+                  onClick={() => handleEdit(user)}
                   className="text-cyan-400 hover:text-cyan-300"
                 >
                   <PencilSquareIcon className="h-5 w-5 inline" />
-                </Link>
-                <button className="text-pink-400 hover:text-pink-300">
+                </button>
+                <button
+                  onClick={() => handleDelete(user._id)}
+                  className="text-pink-400 hover:text-pink-300"
+                >
                   <UserMinusIcon className="h-5 w-5 inline" />
                 </button>
               </div>
@@ -87,6 +158,79 @@ export default function UsersPage() {
           ))}
         </div>
       </div>
+
+      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Kullanıcı Düzenle</DialogTitle>
+          </DialogHeader>
+          {editingUser && (
+            <form onSubmit={handleUpdate}>
+              <div className="space-y-4">
+                <div>
+                  <label
+                    htmlFor="name"
+                    className="block text-sm font-medium text-gray-300"
+                  >
+                    İsim
+                  </label>
+                  <Input
+                    id="name"
+                    value={editingUser.name}
+                    onChange={(e) =>
+                      setEditingUser({ ...editingUser, name: e.target.value })
+                    }
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="email"
+                    className="block text-sm font-medium text-gray-300"
+                  >
+                    E-posta
+                  </label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={editingUser.email}
+                    onChange={(e) =>
+                      setEditingUser({ ...editingUser, email: e.target.value })
+                    }
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="role"
+                    className="block text-sm font-medium text-gray-300"
+                  >
+                    Rol
+                  </label>
+                  <Select
+                    value={editingUser.role}
+                    onValueChange={(value) =>
+                      setEditingUser({ ...editingUser, role: value })
+                    }
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Rol seçin" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="admin">Admin</SelectItem>
+                      <SelectItem value="ortak">Ortak</SelectItem>
+                      <SelectItem value="işçi">İşçi</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <DialogFooter className="mt-6">
+                <Button type="submit">Güncelle</Button>
+              </DialogFooter>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
