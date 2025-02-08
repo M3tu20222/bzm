@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSession, signOut } from "next-auth/react";
 import {
   HomeIcon,
   UserGroupIcon,
@@ -43,8 +44,32 @@ const navItems = [
 export default function Navigation() {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
+  const { data: session, status } = useSession();
 
   const toggleNav = () => setIsOpen(!isOpen);
+
+  if (status === "loading") {
+    return null;
+  }
+
+  if (!session) {
+    return (
+      <div className="fixed top-4 right-4 z-20 flex space-x-4">
+        <Link
+          href="/auth/signin"
+          className="bg-cyan-600 text-white px-4 py-2 rounded-md hover:bg-cyan-700 transition-colors duration-300"
+        >
+          Giriş Yap
+        </Link>
+        <Link
+          href="/auth/signup"
+          className="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 transition-colors duration-300"
+        >
+          Kayıt Ol
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -103,13 +128,15 @@ export default function Navigation() {
             ))}
           </ul>
         )}
+        {session && (
+          <button
+            onClick={() => signOut()}
+            className="absolute bottom-4 left-0 right-0 text-center text-cyan-400 hover:text-cyan-300"
+          >
+            Çıkış Yap
+          </button>
+        )}
       </nav>
-      {isOpen && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-0 sm:hidden"
-          onClick={() => setIsOpen(false)}
-        ></div>
-      )}
     </>
   );
 }

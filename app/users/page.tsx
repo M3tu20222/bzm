@@ -1,39 +1,82 @@
-import Link from "next/link"
-import { UserPlusIcon, UserMinusIcon, PencilSquareIcon } from "@heroicons/react/24/outline"
+"use client";
 
-// Bu örnek için statik veri kullanıyoruz. Gerçek uygulamada bu veriler API'den gelecektir.
-const users = [
-  { id: 1, name: "Ahmet Yılmaz", email: "ahmet@example.com", role: "Admin" },
-  { id: 2, name: "Ayşe Demir", email: "ayse@example.com", role: "Sahip" },
-  { id: 3, name: "Mehmet Kaya", email: "mehmet@example.com", role: "İşçi" },
-]
+import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { PencilSquareIcon, UserMinusIcon } from "@heroicons/react/24/outline";
 
-export default function UserManagement() {
+interface User {
+  _id: string;
+  name: string;
+  email: string;
+  role: string;
+}
+
+export default function UsersPage() {
+  const [users, setUsers] = useState<User[]>([]);
+  const { data: session, status } = useSession();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/auth/signin");
+    } else if (session?.user?.role !== "admin") {
+      router.push("/");
+    } else {
+      fetchUsers();
+    }
+  }, [session, status, router]);
+
+  const fetchUsers = async () => {
+    try {
+      const response = await fetch("/api/users");
+      if (!response.ok) {
+        throw new Error("Kullanıcılar getirilemedi");
+      }
+      const data = await response.json();
+      setUsers(data);
+    } catch (error) {
+      console.error("Kullanıcılar yüklenirken hata oluştu:", error);
+    }
+  };
+
+  if (status === "loading") {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-900">
+        <div className="text-cyan-400">Yükleniyor...</div>
+      </div>
+    );
+  }
+
+  if (session?.user?.role !== "admin") {
+    return null;
+  }
+
   return (
     <div className="min-h-screen bg-gray-900 text-cyan-400 p-8">
-      <h1 className="text-3xl font-bold mb-8 text-center text-cyan-300 animate-pulse">Kullanıcı Yönetimi</h1>
+      <h1 className="text-3xl font-bold mb-8 text-center text-cyan-300">
+        Kullanıcı Yönetimi
+      </h1>
 
-      <div className="mb-8">
-        <Link
-          href="/users/add"
-          className="inline-flex items-center px-4 py-2 bg-cyan-600 text-white rounded-md hover:bg-cyan-700 transition-colors duration-300"
-        >
-          <UserPlusIcon className="h-5 w-5 mr-2" />
-          Yeni Kullanıcı Ekle
-        </Link>
-      </div>
-
-      <div className="bg-gray-800 rounded-lg shadow p-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="rounded-lg shadow p-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {users.map((user) => (
-            <div key={user.id} className="bg-gray-800 rounded-lg shadow p-4">
+            <div key={user._id} className="bg-gray-800 rounded-lg shadow p-4">
               <div className="flex justify-between items-center mb-2">
-                <h3 className="text-lg font-medium text-cyan-300">{user.name}</h3>
-                <span className="px-2 py-1 text-xs font-semibold rounded-full bg-cyan-600 text-white">{user.role}</span>
+                <h3 className="text-lg font-medium text-cyan-300">
+                  {user.name}
+                </h3>
+                <span className="px-2 py-1 text-xs font-semibold rounded-full bg-cyan-600 text-white">
+                  {user.role}
+                </span>
               </div>
               <p className="text-sm text-gray-400 mb-4">{user.email}</p>
               <div className="flex justify-end space-x-2">
-                <Link href={`/users/edit/${user.id}`} className="text-cyan-400 hover:text-cyan-300">
+                <Link
+                  href={`/users/edit/${user._id}`}
+                  className="text-cyan-400 hover:text-cyan-300"
+                >
                   <PencilSquareIcon className="h-5 w-5 inline" />
                 </Link>
                 <button className="text-pink-400 hover:text-pink-300">
@@ -45,6 +88,5 @@ export default function UserManagement() {
         </div>
       </div>
     </div>
-  )
+  );
 }
-
